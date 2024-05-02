@@ -76,12 +76,8 @@ bool ClientUDP::SendMessageType0(unsigned char* buffer, size_t buffer_size){
     {
         buffer[i] = response[i+4];
     }
-    
-    buffer[sizeMessage] = '\0';
 
     return true;
-    
-
 }
 
 bool ClientUDP::SendMessageType1(unsigned char* buffer, size_t buffer_size){
@@ -114,12 +110,8 @@ bool ClientUDP::SendMessageType1(unsigned char* buffer, size_t buffer_size){
     {
         buffer[i] = response[i+4];
     }
-    
-    buffer[sizeMessage] = '\0';
 
     return true;
-    
-
 }
 
 bool ClientUDP::SendMessageType2(unsigned int* resp){
