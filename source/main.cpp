@@ -1,13 +1,14 @@
 #include <iostream>
 #include <string>
 #include "ClientUDP.h"
+#include <iomanip>
 
 
 int main(void){
     std::string stringInput;
     int option;
-    char response[1024];
-    unsigned char messageBytes[3] = {0x00, 0x37, 0x51};
+    unsigned char response[1024];
+    unsigned int numberResponse;
 
 
     ClientUDP *client = new ClientUDP("15.228.191.109", 50000);
@@ -40,43 +41,49 @@ int main(void){
         case 1:
             std::cout << "Opção 1 selecionada." << std::endl;
 
-            messageBytes[0] = 0x00;
-
-            if (client->sendMessage(messageBytes)) {
-                std::cout << "Enviando requisição ao servidor..." << std::endl;
+            try
+            {
+                client->SendMessageType0(response, sizeof(response));
             }
-
-            if (client->receiveMessage(response, sizeof(response))) {
-                std::cout << "Resposta do servidor: " << response << std::endl;
+            catch(const std::exception& e)
+            {
+                std::cerr << e.what() << '\n';
+                break;
             }
+            
+            std::cout << "Resposta do servidor: " << response << std::endl;
 
             break;
         case 2:
             std::cout << "Opção 2 selecionada." << std::endl;
 
-            messageBytes[0] = 0x01;
-
-            if (client->sendMessage(messageBytes)) {
-                std::cout << "Enviando requisição ao servidor..." << std::endl;
+            try
+            {
+                client->SendMessageType1(response, sizeof(response));
             }
-
-            if (client->receiveMessage(response, sizeof(response))) {
-                std::cout << "Resposta do servidor: " << response << std::endl;
+            catch(const std::exception& e)
+            {
+                std::cerr << e.what() << '\n';
+                break;
             }
+            
+            std::cout << "Resposta do servidor: " << response << std::endl;
 
             break;
         case 3:
             std::cout << "Opção 3 selecionada." << std::endl;
 
-            messageBytes[0] = 0x02;
-
-            if (client->sendMessage(messageBytes)) {
-                std::cout << "Enviando requisição ao servidor..." << std::endl;
+            try
+            {
+                client->SendMessageType2(&numberResponse);
             }
-
-            if (client->receiveMessage(response, sizeof(response))) {
-                std::cout << "Resposta do servidor: " << response << std::endl;
+            catch(const std::exception& e)
+            {
+                std::cerr << e.what() << '\n';
+                break;
             }
+            
+            std::cout << "Resposta do servidor: " << std::dec << numberResponse << std::endl;
 
             break;
         case 4:
