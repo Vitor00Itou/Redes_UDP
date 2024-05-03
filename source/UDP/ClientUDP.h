@@ -9,30 +9,21 @@
 #include <cstring>
 #include <cstdlib>
 #include <ctime>
+#include "../GeneralClient.h"
 
-
-class ClientUDP
+class ClientUDP : GeneralClient
 {
 public:
     ClientUDP();
     ClientUDP(const char *ip, int port);
     ~ClientUDP();
 
-    bool sendMessage(unsigned char *menssage);
+    bool sendMessage(unsigned char *message);
     bool receiveMessage(unsigned char* buffer, size_t buffer_size);
 
     bool SendMessageType0(unsigned char* buffer, size_t buffer_size);
     bool SendMessageType1(unsigned char* buffer, size_t buffer_size);
     bool SendMessageType2(unsigned int* resp);
-
-private:
-    void radomizeLast2bytesMessage();
-    unsigned int charsToInt(const unsigned char* chars);
-
-    int sockfd;
-    struct sockaddr_in server_addr;
-    unsigned char response[1024];
-    unsigned char messageBytes[3];
 };
 
 #endif
