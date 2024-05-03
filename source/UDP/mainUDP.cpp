@@ -3,13 +3,11 @@
 #include "ClientUDP.h"
 #include <iomanip>
 
-
 int main(void){
     std::string stringInput;
     int option;
     unsigned char response[1024];
     unsigned int numberResponse;
-
 
     ClientUDP *client = new ClientUDP("15.228.191.109", 50000);
 
@@ -23,7 +21,6 @@ int main(void){
         std::cout << "4. Sair." << std::endl;
 
         std::cin >> stringInput;
-
 
         // Tratamento de erro para caso o usuário digite algo inesperado
         try
