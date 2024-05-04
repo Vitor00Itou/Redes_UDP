@@ -7,6 +7,7 @@ ClientRAW::ClientRAW()
         std::cerr << "Erro ao criar o socket." << std::endl;
         return;
     }
+
     socklen_t addr_len = sizeof(this->local_addr);
     if (getsockname(sockfd, (struct sockaddr *)& this->local_addr, &addr_len) != 0) {
         std::cerr << "Erro ao obter a porta local." << std::endl;
@@ -19,18 +20,18 @@ ClientRAW::ClientRAW()
     inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr);  // Endereço localhost
 }
 
-#include <errno.h>
-
 ClientRAW::ClientRAW(const char* ip, int port)
 {
 	sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
     if (sockfd < 0) {
         std::cerr << "Erro ao criar o socket." << std::endl;
+        return;
     }
     
     socklen_t addr_len = sizeof(this->local_addr);
     if (getsockname(sockfd, (struct sockaddr *)& this->local_addr, &addr_len) != 0) {
         std::cerr << "Erro ao obter a porta local." << std::endl;
+        return;
     }
     
     memset(&server_addr, 0, sizeof(server_addr));
@@ -44,79 +45,136 @@ ClientRAW::~ClientRAW()
 	close(sockfd);
 }
 
-bool ClientRAW::sendMessage(unsigned char* rawMessage) {
+bool ClientRAW::sendMessage(u_char* rawMessage) {
     // Pacote UDP a ser construido com 8 bytes de cabeçalho e 3 de payload
-    unsigned char udpPkt[APP_REQ_SIZE + UDP_HEADER_SIZE] = {0}; // Inicializando o array de bytes com 0
+    u_char udpPkt[SEGMENT_SIZE] = {0}; // Inicializando o array de bytes com 0
 
-    // Colocando a porta de origem (está em little-endian)
-    udpPkt[0] = local_addr.sin_port & 0xFF;
-    udpPkt[1] = (local_addr.sin_port >> 8) & 0xFF;
+    // Colocando a porta de origem
+    u_short aux = ntohs(local_addr.sin_port); // Passando para big-endian
+    udpPkt[0] = static_cast<u_char>(aux >> 8);
+    udpPkt[1] = static_cast<u_char>(aux);
 
-    // Colocando a porta de destino (está em little-endian)
-    udpPkt[2] = server_addr.sin_port & 0xFF;
-    udpPkt[3] = (server_addr.sin_port >> 8) & 0xFF;
+    // Colocando a porta de destino
+    aux = ntohs(server_addr.sin_port); // Passando para big-endian
+    udpPkt[2] = static_cast<u_char>(aux >> 8);
+    udpPkt[3] = static_cast<u_char>(aux);
 
     // Colocando o tamanho do segmento
-    udpPkt[4] = (SEGMENT_SIZE >> 8) & 0xFF;
-    udpPkt[5] = SEGMENT_SIZE & 0xFF;
+    udpPkt[4] = static_cast<u_char>(SEGMENT_SIZE >> 8); // MSBs de 0x000B
+    udpPkt[5] = static_cast<u_char>(SEGMENT_SIZE); // LSBs de 0x000B
 
     // Colocando o payload
     for (int i = 0; i < 3; i++) {
         udpPkt[i+UDP_HEADER_SIZE] = rawMessage[i];
     }
+    // udpPkt[8] = 0x0;
+    // udpPkt[9] = 0x16;
+    // udpPkt[10] = 0xa1;
 
     // Colocando o checksum
-    unsigned short checksum = getChecksum(udpPkt, APP_REQ_SIZE+UDP_HEADER_SIZE);
-    udpPkt[6] = (checksum >> 8) & 0xFF;
-    udpPkt[7] = checksum & 0xFF;
+    u_short chksum = computeChecksum(udpPkt, SEGMENT_SIZE);
+    udpPkt[6] = static_cast<u_char>(chksum >> 8);
+    udpPkt[7] = static_cast<u_char>(chksum);
 
-    puts("Segment:");
-    for (int i = 0; i < SEGMENT_SIZE; i++) {
-        printf("%x ", udpPkt[i]);
-    }
-    puts("");
+    // puts("Segment:");
+    // for (int i = 0; i < SEGMENT_SIZE; i++) {
+    //     printf("%x ", udpPkt[i]);
+    // }
+    // puts("");
 
+    // Enviando a requisição de fato
     ssize_t send_len = sendto(sockfd, udpPkt, sizeof(udpPkt), 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
     return send_len >= 0;
 }
 
-bool ClientRAW::receiveMessage(unsigned char* buffer, size_t buffer_size) {
-    ssize_t recv_len = recvfrom(sockfd, buffer, buffer_size, 0, nullptr, nullptr);
+bool ClientRAW::receiveMessage(u_char* buffer, size_t buffer_size) {
+    const int headerSize = UDP_HEADER_SIZE+IPV4_HEADER_SIZE;
+    u_char auxBuffer[buffer_size+headerSize];
+    ssize_t recv_len = recvfrom(sockfd, auxBuffer, buffer_size+headerSize, 0, nullptr, nullptr);
     if (recv_len < 0) {
         return false;
     }
+    // puts("Recv buffer:");
+    // for (int i = 0; i < recv_len; i++) {
+    //     if (i < headerSize)
+    //         printf("%d-", auxBuffer[i]);
+    //     else
+    //         printf("%c", auxBuffer[i]);
+    // }
+    // puts("");
+    for (int i = 0; i < recv_len; i++)
+        buffer[i] = auxBuffer[i+headerSize];
     buffer[recv_len] = '\0';  // Adiciona um terminador de string
+    // puts("Recv buffer:");
+    // for (int i = 0; buffer[i] != '\0'; i++) {
+    //     printf("%c", buffer[i]);
+    // }
+    // puts("");
     return true;
 }
 
-unsigned short ClientRAW::getChecksum(unsigned char* segment, int segSize) {
-    unsigned char* auxPacket = segment;
+u_short ClientRAW::computeChecksum(u_char* segment, int segSize) {
+    u_char* auxSegment = segment;
+    bool padded = false;
+    
+    // Fazendo o padding do último byte, caso o tamanho seja ímpar
     if (segSize % 2 == 0) {
+        padded = true;
+        auxSegment = (u_char*) calloc(segSize, sizeof(u_char));
+        for (int i = 0; i < segSize; i++)
+            auxSegment[i] = segment[i]; // Copiando os valores pra o segmento de padding
         segSize++;
-        auxPacket = (unsigned char*) malloc(segSize);
     }
-    unsigned int chksum = 0;
 
-    // Pseudoheader byte a byte
-    unsigned short pseudoIPHeader[] = {0xC0, 0xA8, 0x01, 0x69, 0x0F, 0xE4, 0xBF, 0x6D, 0x00, 0x11, 0x00, 0x0B};
+    u_int chksum = 0;
 
     // Somando o pseudoheader
-    for (int i = 0; i < 12; i += 2) {
-        chksum += (unsigned short) ((pseudoIPHeader[i] << 8) | (pseudoIPHeader[i+1]));
-    }
+    u_int aux = getLocalIPv4(); // Little-endian
+    chksum += static_cast<u_short>(aux >> 16); // LSBytes do IP local
+    chksum += static_cast<u_short>(aux); // MSBytes do IP local
+
+    aux = ntohl(server_addr.sin_addr.s_addr); // Little-endian
+    chksum += static_cast<u_short>(aux >> 16); // LSBytes do IP de destino
+    chksum += static_cast<u_short>(aux); // MSBytes do IP de destino
+
+    chksum += 0x0011; // Número do protocolo UDP
+    chksum += 0x000B; // Tamanho do payload
 
     // Somando o cabeçalho UDP e payload (segmento UDP)
     for (int i = 0; i < segSize; i += 2) {
-        chksum += (unsigned short) ((auxPacket[i] << 8) | (auxPacket[i+1]));
+        chksum += static_cast<u_short>((auxSegment[i] << 8) | (auxSegment[i+1]));
     }
+    
     // Fazendo o wrapparound
-    printf("Chksum MSBs: %x\n", ((chksum >> 16) & 0xFFFF));
-    printf("Chksum LSBs: %x\n", (chksum & 0xFFFF));
-    //printf("Chksum antes: %x\n", chksum);
-    chksum = ((chksum >> 16) & 0xFF) + (chksum & 0xFF);
-    //printf("Chksum depois: %x\n", chksum);
+    chksum = (static_cast<u_short>(chksum >> 16)) + static_cast<u_short>(chksum);
 
-    if (auxPacket != segment && auxPacket != NULL)
-        free(auxPacket);
+    if (padded)
+        free(auxSegment);
     return ~chksum; // Fazendo o complemento de 1
+}
+
+/**
+ *  Retorna o endereço IPv4 como um inteiro de 32 bits em formato little-endian.
+ */
+u_int ClientRAW::getLocalIPv4() {
+    // Pegando as interfaces de rede locais
+    struct ifaddrs *ifaddr, *ifa;
+    if (getifaddrs(&ifaddr) == -1) {
+        std::cerr << "Erro ao obter o endereço IPv4 local.\n";
+        return -1;
+    }
+
+    // Iterando sobre as interfaces de rede
+    for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
+        
+        // Pegando a primeira interface com conexão de internet e sem ser o loopback
+        if (ifa->ifa_addr != nullptr && ifa->ifa_addr->sa_family == AF_INET && strcmp(ifa->ifa_name, "lo") != 0) {
+            // Pegando o IPv4 em little-endian
+            struct sockaddr_in *addr = reinterpret_cast<struct sockaddr_in*>(ifa->ifa_addr);
+            u_int ipv4 = ntohl(addr->sin_addr.s_addr);
+            freeifaddrs(ifaddr);
+            return ipv4;
+        }
+    }
+    return 0;
 }
