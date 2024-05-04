@@ -16,12 +16,13 @@ public:
     GeneralClient();
     ~GeneralClient();
 
+    // A serem implementadas pelo cliente de um protocolo específico
     virtual bool sendMessage(unsigned char *menssage) = 0;
     virtual bool receiveMessage(unsigned char* buffer, size_t buffer_size) = 0;
 
-    virtual bool SendMessageType0(unsigned char* buffer, size_t buffer_size) = 0;
-    virtual bool SendMessageType1(unsigned char* buffer, size_t buffer_size) = 0;
-    virtual bool SendMessageType2(unsigned int* resp) = 0;
+    bool handleType0Message(unsigned char* buffer, size_t buffer_size);
+    bool handleType1Message(unsigned char* buffer, size_t buffer_size);
+    bool handleType2Message(unsigned int* resp);
 
 protected:
     void randomizeLast2bytesMessage();
@@ -29,7 +30,7 @@ protected:
 
     int sockfd;
     struct sockaddr_in server_addr;
-    unsigned char response[1024];
+    unsigned char recvBuffer[1024];
     unsigned char messageBytes[3];
 };
 

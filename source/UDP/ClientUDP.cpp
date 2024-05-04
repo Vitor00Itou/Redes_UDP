@@ -23,7 +23,7 @@ ClientUDP::ClientUDP(const char *ip, int port) {
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(port);  // Porta do servidor
-    inet_pton(AF_INET, ip, &server_addr.sin_addr);  // Endereço localhost
+    inet_pton(AF_INET, ip, &server_addr.sin_addr);  // Endereço escolhido
 }
 
 ClientUDP::~ClientUDP()
@@ -44,113 +44,4 @@ bool ClientUDP::receiveMessage(unsigned char* buffer, size_t buffer_size) {
     }
     buffer[recv_len] = '\0';  // Adiciona um terminador de string
     return true;
-}
-
-bool ClientUDP::SendMessageType0(unsigned char* buffer, size_t buffer_size){
-    // Tipo 0
-    messageBytes[0] = 0x00;
-
-    randomizeLast2bytesMessage();
-
-    if (!sendMessage(messageBytes)) {
-        throw std::runtime_error("Erro ao enviar mensagem.");
-    }
-
-    if (!receiveMessage(response, sizeof(response))) {
-        throw std::runtime_error("Erro ao receber mensagem.");
-    }
-
-    if (response[0] != 0x10)
-    {
-        throw std::runtime_error("Erro na formatação da mensagem recebida.");
-    }
-    
-    if (response[1] != messageBytes[1] || response[2] != messageBytes[2])
-    {
-        throw std::runtime_error("Identificador da mensagem recebida foi diferente do esperado.");
-    }
-
-    int sizeMessage = response[3];
-
-    for (size_t i = 0; i < sizeMessage; i++)
-    {
-        buffer[i] = response[i+4];
-    }
-
-    return true;
-}
-
-bool ClientUDP::SendMessageType1(unsigned char* buffer, size_t buffer_size){
-    // Tipo 1
-    messageBytes[0] = 0x01;
-
-    randomizeLast2bytesMessage();
-
-    if (!sendMessage(messageBytes)) {
-        throw std::runtime_error("Erro ao enviar mensagem.");
-    }
-
-    if (!receiveMessage(response, sizeof(response))) {
-        throw std::runtime_error("Erro ao receber mensagem.");
-    }
-
-    if (response[0] != 0x11)
-    {
-        throw std::runtime_error("Erro na formatação da mensagem recebida.");
-    }
-    
-    if (response[1] != messageBytes[1] || response[2] != messageBytes[2])
-    {
-        throw std::runtime_error("Identificador da mensagem recebida foi diferente do esperado.");
-    }
-
-    int sizeMessage = response[3];
-
-    for (size_t i = 0; i < sizeMessage; i++)
-    {
-        buffer[i] = response[i+4];
-    }
-
-    return true;
-}
-
-bool ClientUDP::SendMessageType2(unsigned int* resp){
-    unsigned char number4Bytes[4];
-    unsigned int numberResponse;
-
-    // Tipo 2
-    messageBytes[0] = 0x02;
-
-    randomizeLast2bytesMessage();
-
-    if (!sendMessage(messageBytes)) {
-        throw std::runtime_error("Erro ao enviar mensagem.");
-    }
-
-    if (!receiveMessage(response, sizeof(response))) {
-        throw std::runtime_error("Erro ao receber mensagem.");
-    }
-
-    if (response[0] != 0x12 || response[3] != 0x04)
-    {
-        throw std::runtime_error("Erro na formatação da mensagem recebida.");
-    }
-   
-    if (response[1] != messageBytes[1] || response[2] != messageBytes[2])
-    {
-        throw std::runtime_error("Identificador da mensagem recebida foi diferente do esperado.");
-    }
-
-    for (size_t i = 0; i < 4; i++)
-    {
-        number4Bytes[i] = response[i+4];
-    }
-    
-    numberResponse = charsToInt(number4Bytes);
-
-    *resp = numberResponse;
-
-    return true;
-    
-
 }

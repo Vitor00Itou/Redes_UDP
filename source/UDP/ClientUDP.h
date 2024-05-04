@@ -11,7 +11,7 @@
 #include <ctime>
 #include "../GeneralClient.h"
 
-class ClientUDP : GeneralClient
+class ClientUDP : public GeneralClient
 {
 public:
     ClientUDP();
@@ -20,10 +20,6 @@ public:
 
     bool sendMessage(unsigned char *message);
     bool receiveMessage(unsigned char* buffer, size_t buffer_size);
-
-    bool SendMessageType0(unsigned char* buffer, size_t buffer_size);
-    bool SendMessageType1(unsigned char* buffer, size_t buffer_size);
-    bool SendMessageType2(unsigned int* resp);
 };
 
 #endif

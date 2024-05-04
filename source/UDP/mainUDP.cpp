@@ -6,19 +6,19 @@
 int main(void){
     std::string stringInput;
     int option;
-    unsigned char response[1024];
+    unsigned char recvBuffer[1024];
     unsigned int numberResponse;
 
-    ClientUDP *client = new ClientUDP("15.228.191.109", 50000);
+    GeneralClient *client = new ClientUDP("15.228.191.109", 50000);
 
     while (true)
     {
         std::cout << "********************************************************************" << std::endl;
         std::cout << "Selecione uma opcão de requisição para o servidor:" << std::endl;
-        std::cout << "1. Data e hora atual." << std::endl;
-        std::cout << "2. Uma mensagem motivacional para o fim do semestre." << std::endl;
-        std::cout << "3. A quantidade de respostas emitidas pelo servidor até o momento." << std::endl;
-        std::cout << "4. Sair." << std::endl;
+        std::cout << "0. Data e hora atual." << std::endl;
+        std::cout << "1. Uma mensagem motivacional para o fim do semestre." << std::endl;
+        std::cout << "2. A quantidade de respostas emitidas pelo servidor até o momento." << std::endl;
+        std::cout << "3. Sair." << std::endl;
 
         std::cin >> stringInput;
 
@@ -35,12 +35,12 @@ int main(void){
 
         switch (option)
         {
-        case 1:
+        case 0:
             std::cout << "Opção 1 selecionada." << std::endl;
 
             try
             {
-                client->SendMessageType0(response, sizeof(response));
+                client->handleType0Message(recvBuffer, sizeof(recvBuffer));
             }
             catch(const std::exception& e)
             {
@@ -48,15 +48,15 @@ int main(void){
                 break;
             }
             
-            std::cout << "Resposta do servidor: " << response << std::endl;
+            std::cout << "Resposta do servidor: " << recvBuffer << std::endl;
 
             break;
-        case 2:
+        case 1:
             std::cout << "Opção 2 selecionada." << std::endl;
 
             try
             {
-                client->SendMessageType1(response, sizeof(response));
+                client->handleType1Message(recvBuffer, sizeof(recvBuffer));
             }
             catch(const std::exception& e)
             {
@@ -64,15 +64,15 @@ int main(void){
                 break;
             }
             
-            std::cout << "Resposta do servidor: " << response << std::endl;
+            std::cout << "Resposta do servidor: " << recvBuffer << std::endl;
 
             break;
-        case 3:
+        case 2:
             std::cout << "Opção 3 selecionada." << std::endl;
 
             try
             {
-                client->SendMessageType2(&numberResponse);
+                client->handleType2Message(&numberResponse);
             }
             catch(const std::exception& e)
             {
@@ -83,7 +83,7 @@ int main(void){
             std::cout << "Resposta do servidor: " << std::dec << numberResponse << std::endl;
 
             break;
-        case 4:
+        case 3:
             std::cout << "Saindo..." << std::endl;
             return 0;
         default:
