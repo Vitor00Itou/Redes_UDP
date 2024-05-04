@@ -6,7 +6,7 @@
 #include "../GeneralClient.h"
 
 #define SEGMENT_SIZE 0x000B // Tamanho em 2 bytes do segmento
-#define APP_PROTO_REQ_SIZE 3 // Tamanho do payload de uma requisição nessa aplicação
+#define APP_REQ_SIZE 3 // Tamanho do payload de uma requisição nessa aplicação
 #define UDP_HEADER_SIZE 8 // Tamanho de um cabeçalho UDP
 
 class ClientRAW : public GeneralClient

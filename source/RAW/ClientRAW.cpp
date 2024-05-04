@@ -19,19 +19,20 @@ ClientRAW::ClientRAW()
     inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr);  // Endereço localhost
 }
 
+#include <errno.h>
+
 ClientRAW::ClientRAW(const char* ip, int port)
 {
 	sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
     if (sockfd < 0) {
         std::cerr << "Erro ao criar o socket." << std::endl;
-        return;
     }
+    
     socklen_t addr_len = sizeof(this->local_addr);
     if (getsockname(sockfd, (struct sockaddr *)& this->local_addr, &addr_len) != 0) {
         std::cerr << "Erro ao obter a porta local." << std::endl;
-        return;
     }
-
+    
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(port);  // Porta do servidor
@@ -45,37 +46,35 @@ ClientRAW::~ClientRAW()
 
 bool ClientRAW::sendMessage(unsigned char* rawMessage) {
     // Pacote UDP a ser construido com 8 bytes de cabeçalho e 3 de payload
-    unsigned char udpPkt[APP_PROTO_REQ_SIZE + UDP_HEADER_SIZE] = {0}; // Inicializando o array de bytes com 0
+    unsigned char udpPkt[APP_REQ_SIZE + UDP_HEADER_SIZE] = {0}; // Inicializando o array de bytes com 0
 
-    printf("Orig port: %d\n", local_addr.sin_port);
-    printf("Orig MSBs: %x\n", local_addr.sin_port);
-    printf("Orig LSBs: %x\n", local_addr.sin_port);
-    // Colocando a porta de origem
-    udpPkt[0] = (local_addr.sin_port >> 8) & 0xFF;
-    udpPkt[1] = local_addr.sin_port & 0xFF;
-    
-    printf("Dest port: %d\n", server_addr.sin_port);
-    printf("Dest MSBs: %x\n", server_addr.sin_port);
-    printf("Dest LSBs: %x\n", server_addr.sin_port);
-    // Colocando a porta de destino
-    udpPkt[2] = (server_addr.sin_port >> 8) & 0xFF;
-    udpPkt[3] = server_addr.sin_port & 0xFF;
+    // Colocando a porta de origem (está em little-endian)
+    udpPkt[0] = local_addr.sin_port & 0xFF;
+    udpPkt[1] = (local_addr.sin_port >> 8) & 0xFF;
 
-    printf("Seg size MSBs: %x\n", (SEGMENT_SIZE >> 8) & 0xFF);
-    printf("Seg size LSBs: %x\n", SEGMENT_SIZE & 0xFF);
+    // Colocando a porta de destino (está em little-endian)
+    udpPkt[2] = server_addr.sin_port & 0xFF;
+    udpPkt[3] = (server_addr.sin_port >> 8) & 0xFF;
+
     // Colocando o tamanho do segmento
     udpPkt[4] = (SEGMENT_SIZE >> 8) & 0xFF;
     udpPkt[5] = SEGMENT_SIZE & 0xFF;
 
     // Colocando o payload
-    for (int i = 8; i < APP_PROTO_REQ_SIZE + UDP_HEADER_SIZE; i++) {
-        udpPkt[i] = rawMessage[i];
+    for (int i = 0; i < 3; i++) {
+        udpPkt[i+UDP_HEADER_SIZE] = rawMessage[i];
     }
 
     // Colocando o checksum
-    unsigned short checksum = getChecksum(udpPkt, APP_PROTO_REQ_SIZE+UDP_HEADER_SIZE);
+    unsigned short checksum = getChecksum(udpPkt, APP_REQ_SIZE+UDP_HEADER_SIZE);
     udpPkt[6] = (checksum >> 8) & 0xFF;
     udpPkt[7] = checksum & 0xFF;
+
+    puts("Segment:");
+    for (int i = 0; i < SEGMENT_SIZE; i++) {
+        printf("%x ", udpPkt[i]);
+    }
+    puts("");
 
     ssize_t send_len = sendto(sockfd, udpPkt, sizeof(udpPkt), 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
     return send_len >= 0;
@@ -97,12 +96,13 @@ unsigned short ClientRAW::getChecksum(unsigned char* segment, int segSize) {
         auxPacket = (unsigned char*) malloc(segSize);
     }
     unsigned int chksum = 0;
-    // Pseudoheader byte a byte: ipOrig, ipDest, protocolo de transporte, comprimento do segmento UDP
+
+    // Pseudoheader byte a byte
     unsigned short pseudoIPHeader[] = {0xC0, 0xA8, 0x01, 0x69, 0x0F, 0xE4, 0xBF, 0x6D, 0x00, 0x11, 0x00, 0x0B};
 
     // Somando o pseudoheader
-    for (int i = 0; i < 8; i++) {
-        chksum += (unsigned short) ((pseudoIPHeader[i] << 8) | (auxPacket[i+1]));
+    for (int i = 0; i < 12; i += 2) {
+        chksum += (unsigned short) ((pseudoIPHeader[i] << 8) | (pseudoIPHeader[i+1]));
     }
 
     // Somando o cabeçalho UDP e payload (segmento UDP)
@@ -110,8 +110,13 @@ unsigned short ClientRAW::getChecksum(unsigned char* segment, int segSize) {
         chksum += (unsigned short) ((auxPacket[i] << 8) | (auxPacket[i+1]));
     }
     // Fazendo o wrapparound
-    chksum = ((chksum >> 16) & 0xFFFF) + (chksum & 0xFFFF);
+    printf("Chksum MSBs: %x\n", ((chksum >> 16) & 0xFFFF));
+    printf("Chksum LSBs: %x\n", (chksum & 0xFFFF));
+    //printf("Chksum antes: %x\n", chksum);
+    chksum = ((chksum >> 16) & 0xFF) + (chksum & 0xFF);
+    //printf("Chksum depois: %x\n", chksum);
 
-    std::cout << "Checksum calculado: " << ~chksum << std::endl;
+    if (auxPacket != segment && auxPacket != NULL)
+        free(auxPacket);
     return ~chksum; // Fazendo o complemento de 1
 }

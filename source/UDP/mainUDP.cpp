@@ -36,7 +36,7 @@ int main(void){
         switch (option)
         {
         case 0:
-            std::cout << "Opção 1 selecionada." << std::endl;
+            std::cout << "Opção 0 selecionada." << std::endl;
 
             try
             {
@@ -52,7 +52,7 @@ int main(void){
 
             break;
         case 1:
-            std::cout << "Opção 2 selecionada." << std::endl;
+            std::cout << "Opção 1 selecionada." << std::endl;
 
             try
             {
@@ -68,7 +68,7 @@ int main(void){
 
             break;
         case 2:
-            std::cout << "Opção 3 selecionada." << std::endl;
+            std::cout << "Opção 2 selecionada." << std::endl;
 
             try
             {
