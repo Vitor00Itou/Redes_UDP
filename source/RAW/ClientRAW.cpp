@@ -50,9 +50,10 @@ bool ClientRAW::sendMessage(u_char* rawMessage) {
     u_char udpPkt[SEGMENT_SIZE] = {0}; // Inicializando o array de bytes com 0
 
     // Colocando a porta de origem
-    u_short aux = ntohs(local_addr.sin_port); // Passando para big-endian
-    udpPkt[0] = static_cast<u_char>(aux >> 8);
-    udpPkt[1] = static_cast<u_char>(aux);
+    uint16_t aux = ntohs(local_addr.sin_port); // Passando para big-endian
+    // Porta 22222
+    udpPkt[0] = 0x56;
+    udpPkt[1] = 0xCE;
 
     // Colocando a porta de destino
     aux = ntohs(server_addr.sin_port); // Passando para big-endian
@@ -90,26 +91,31 @@ bool ClientRAW::sendMessage(u_char* rawMessage) {
 bool ClientRAW::receiveMessage(u_char* buffer, size_t buffer_size) {
     const int headerSize = UDP_HEADER_SIZE+IPV4_HEADER_SIZE;
     u_char auxBuffer[buffer_size+headerSize];
+
     ssize_t recv_len = recvfrom(sockfd, auxBuffer, buffer_size+headerSize, 0, nullptr, nullptr);
     if (recv_len < 0) {
         return false;
     }
-    // puts("Recv buffer:");
-    // for (int i = 0; i < recv_len; i++) {
-    //     if (i < headerSize)
-    //         printf("%d-", auxBuffer[i]);
-    //     else
-    //         printf("%c", auxBuffer[i]);
-    // }
-    // puts("");
+    puts("Recv buffer:");
+    for (int i = 0; i < recv_len; i++) {
+        if (i < headerSize)
+            printf("%x-", auxBuffer[i]);
+        else
+            printf("%x-", auxBuffer[i]);
+    }
+    puts("");
     for (int i = 0; i < recv_len; i++)
         buffer[i] = auxBuffer[i+headerSize];
     buffer[recv_len] = '\0';  // Adiciona um terminador de string
-    // puts("Recv buffer:");
-    // for (int i = 0; buffer[i] != '\0'; i++) {
-    //     printf("%c", buffer[i]);
-    // }
-    // puts("");
+    puts("Recv buffer em hex:");
+    for (int i = 0; i < buffer[3]+4; i++) {
+        printf("%x-", buffer[i]);
+    }
+    puts("\nRecv buffer em char:");
+    for (int i = 0; i < buffer[3]+4; i++) {
+        printf("%c", buffer[i]);
+    }
+    puts("");
     return true;
 }
 
@@ -120,7 +126,7 @@ u_short ClientRAW::computeChecksum(u_char* segment, int segSize) {
     // Fazendo o padding do último byte, caso o tamanho seja ímpar
     if (segSize % 2 == 0) {
         padded = true;
-        auxSegment = (u_char*) calloc(segSize, sizeof(u_char));
+        auxSegment = static_cast<u_char*>(calloc(segSize, sizeof(u_char)));
         for (int i = 0; i < segSize; i++)
             auxSegment[i] = segment[i]; // Copiando os valores pra o segmento de padding
         segSize++;
@@ -142,7 +148,7 @@ u_short ClientRAW::computeChecksum(u_char* segment, int segSize) {
 
     // Somando o cabeçalho UDP e payload (segmento UDP)
     for (int i = 0; i < segSize; i += 2) {
-        chksum += static_cast<u_short>((auxSegment[i] << 8) | (auxSegment[i+1]));
+        chksum += static_cast<u_short>((auxSegment[i] << 8) | static_cast<u_short>(auxSegment[i+1]));
     }
     
     // Fazendo o wrapparound

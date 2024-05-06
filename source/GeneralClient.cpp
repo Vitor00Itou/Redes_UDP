@@ -48,11 +48,15 @@ bool GeneralClient::handleType0Message(unsigned char* buffer, size_t buffer_size
         throw std::runtime_error("Erro ao receber mensagem.");
     }
 
+    printf("Primeiro byte recebido: %x\n", recvBuffer[0]);
+    printf("Primeiro byte esperado: %x\n", 0x10);
     if (recvBuffer[0] != 0x10)
     {
         throw std::runtime_error("Erro na formatação da mensagem recebida.");
     }
     
+    printf("Identificador recebido: %x e %x\n", recvBuffer[1], recvBuffer[2]);
+    printf("Identificador esperado: %x e %x\n", messageBytes[1], messageBytes[2]);
     if (recvBuffer[1] != messageBytes[1] || recvBuffer[2] != messageBytes[2])
     {
         throw std::runtime_error("Identificador da mensagem recebida foi diferente do esperado.");
