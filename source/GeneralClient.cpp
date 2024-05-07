@@ -44,24 +44,42 @@ bool GeneralClient::handleType0Message(unsigned char* buffer, size_t buffer_size
         throw std::runtime_error("Erro ao enviar mensagem.");
     }
 
-    if (!receiveMessage(recvBuffer, sizeof(recvBuffer))) {
-        throw std::runtime_error("Erro ao receber mensagem.");
+    // Definir o tempo limite em segundos
+    constexpr int TIMEOUT_SECONDS = 3;
+
+    // Obter o tempo atual
+    auto startTime = std::chrono::steady_clock::now();
+
+
+    // Consome as mensagens do buffer até achar uma com o tipo correto
+    while (true)
+    {
+
+        auto currentTime = std::chrono::steady_clock::now();
+        auto elapsedTime = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime).count();
+        if (elapsedTime >= TIMEOUT_SECONDS) {
+            throw std::runtime_error("Erro ao receber mensagem. Sem resposta do servidor.");
+        }
+
+        // Em caso de timeou, retorna o erro
+        if (!receiveMessage(recvBuffer, sizeof(recvBuffer))) {
+            throw std::runtime_error("Erro ao receber mensagem. Sem resposta do servidor.");
+        }
+
+        // Caso o tipo não seja o correto, volta ao início
+        if (recvBuffer[0] != 0x10)
+        {
+            continue;
+        }
+
+        break;
     }
 
-    printf("Primeiro byte recebido: %x\n", recvBuffer[0]);
-    printf("Primeiro byte esperado: %x\n", 0x10);
-    if (recvBuffer[0] != 0x10)
-    {
-        throw std::runtime_error("Erro na formatação da mensagem recebida.");
-    }
-    
-    printf("Identificador recebido: %x e %x\n", recvBuffer[1], recvBuffer[2]);
-    printf("Identificador esperado: %x e %x\n", messageBytes[1], messageBytes[2]);
+    // Caso o tipo seja o correto, mas o identificador não esteja correto, imprime um warning
     if (recvBuffer[1] != messageBytes[1] || recvBuffer[2] != messageBytes[2])
     {
-        throw std::runtime_error("Identificador da mensagem recebida foi diferente do esperado.");
+        std::cerr << "WARNING: O indentificador não condiz com o enviado. É possível que a mensagem recebida seja uma mensagem atrasada ou de terceiro." << std::endl;
     }
-
     int messageSize = recvBuffer[3];
 
     for (size_t i = 0; i < messageSize; i++)
@@ -82,18 +100,41 @@ bool GeneralClient::handleType1Message(unsigned char* buffer, size_t buffer_size
         throw std::runtime_error("Erro ao enviar mensagem.");
     }
 
-    if (!receiveMessage(recvBuffer, sizeof(recvBuffer))) {
-        throw std::runtime_error("Erro ao receber mensagem.");
+    // Definir o tempo limite em segundos
+    constexpr int TIMEOUT_SECONDS = 3;
+
+    // Obter o tempo atual
+    auto startTime = std::chrono::steady_clock::now();
+
+
+    // Consome as mensagens do buffer até achar uma com o tipo correto
+    while (true)
+    {
+
+        auto currentTime = std::chrono::steady_clock::now();
+        auto elapsedTime = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime).count();
+        if (elapsedTime >= TIMEOUT_SECONDS) {
+            throw std::runtime_error("Erro ao receber mensagem. Sem resposta do servidor.");
+        }
+
+        // Em caso de timeou, retorna o erro
+        if (!receiveMessage(recvBuffer, sizeof(recvBuffer))) {
+            throw std::runtime_error("Erro ao receber mensagem. Sem resposta do servidor.");
+        }
+
+        // Caso o tipo não seja o correto, volta ao início
+        if (recvBuffer[0] != 0x11)
+        {
+            continue;
+        }
+
+        break;
     }
 
-    if (recvBuffer[0] != 0x11)
-    {
-        throw std::runtime_error("Erro na formatação da mensagem recebida.");
-    }
-    
+    // Caso o tipo seja o correto, mas o identificador não esteja correto, imprime um warning
     if (recvBuffer[1] != messageBytes[1] || recvBuffer[2] != messageBytes[2])
     {
-        throw std::runtime_error("Identificador da mensagem recebida foi diferente do esperado.");
+        std::cerr << "WARNING: O indentificador não condiz com o enviado. É possível que a mensagem recebida seja uma mensagem atrasada ou de terceiro." << std::endl;
     }
 
     int messageSize = recvBuffer[3];
@@ -119,18 +160,42 @@ bool GeneralClient::handleType2Message(unsigned int* resp){
         throw std::runtime_error("Erro ao enviar mensagem.");
     }
 
-    if (!receiveMessage(recvBuffer, sizeof(recvBuffer))) {
-        throw std::runtime_error("Erro ao receber mensagem.");
+
+    // Definir o tempo limite em segundos
+    constexpr int TIMEOUT_SECONDS = 3;
+
+    // Obter o tempo atual
+    auto startTime = std::chrono::steady_clock::now();
+
+
+    // Consome as mensagens do buffer até achar uma com o tipo correto
+    while (true)
+    {
+
+        auto currentTime = std::chrono::steady_clock::now();
+        auto elapsedTime = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime).count();
+        if (elapsedTime >= TIMEOUT_SECONDS) {
+            throw std::runtime_error("Erro ao receber mensagem. Sem resposta do servidor.");
+        }
+
+        // Em caso de timeou, retorna o erro
+        if (!receiveMessage(recvBuffer, sizeof(recvBuffer))) {
+            throw std::runtime_error("Erro ao receber mensagem. Sem resposta do servidor.");
+        }
+
+        // Caso o tipo não seja o correto, volta ao início
+        if (recvBuffer[0] != 0x12)
+        {
+            continue;
+        }
+
+        break;
     }
 
-    if (recvBuffer[0] != 0x12 || recvBuffer[3] != 0x04)
-    {
-        throw std::runtime_error("Erro na formatação da mensagem recebida.");
-    }
-   
+    // Caso o tipo seja o correto, mas o identificador não esteja correto, imprime um warning
     if (recvBuffer[1] != messageBytes[1] || recvBuffer[2] != messageBytes[2])
     {
-        throw std::runtime_error("Identificador da mensagem recebida foi diferente do esperado.");
+        std::cerr << "WARNING: O indentificador não condiz com o enviado. É possível que a mensagem recebida seja uma mensagem atrasada ou de terceiro." << std::endl;
     }
 
     for (size_t i = 0; i < 4; i++)

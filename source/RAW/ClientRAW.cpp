@@ -4,20 +4,28 @@ ClientRAW::ClientRAW()
 {
 	sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
     if (sockfd < 0) {
-        std::cerr << "Erro ao criar o socket." << std::endl;
-        return;
+        throw std::runtime_error("Erro ao criar socket.");
     }
 
     socklen_t addr_len = sizeof(this->local_addr);
     if (getsockname(sockfd, (struct sockaddr *)& this->local_addr, &addr_len) != 0) {
-        std::cerr << "Erro ao obter a porta local." << std::endl;
-        return;
+        throw std::runtime_error("Erro ao obter porta.");
     }
 
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(2222);  // Porta do servidor
     inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr);  // Endereço localhost
+
+    // Definir o timeout para 3 segundos
+    struct timeval timeout;
+    timeout.tv_sec = 3;
+    timeout.tv_usec = 0;
+
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
+        throw std::runtime_error("Erro ao definir timeout.");
+        close(sockfd);
+    }
 }
 
 ClientRAW::ClientRAW(const char* ip, int port)
@@ -68,20 +76,11 @@ bool ClientRAW::sendMessage(u_char* rawMessage) {
     for (int i = 0; i < 3; i++) {
         udpPkt[i+UDP_HEADER_SIZE] = rawMessage[i];
     }
-    // udpPkt[8] = 0x0;
-    // udpPkt[9] = 0x16;
-    // udpPkt[10] = 0xa1;
 
     // Colocando o checksum
     u_short chksum = computeChecksum(udpPkt, SEGMENT_SIZE);
     udpPkt[6] = static_cast<u_char>(chksum >> 8);
     udpPkt[7] = static_cast<u_char>(chksum);
-
-    // puts("Segment:");
-    // for (int i = 0; i < SEGMENT_SIZE; i++) {
-    //     printf("%x ", udpPkt[i]);
-    // }
-    // puts("");
 
     // Enviando a requisição de fato
     ssize_t send_len = sendto(sockfd, udpPkt, sizeof(udpPkt), 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
@@ -96,26 +95,10 @@ bool ClientRAW::receiveMessage(u_char* buffer, size_t buffer_size) {
     if (recv_len < 0) {
         return false;
     }
-    puts("Recv buffer:");
-    for (int i = 0; i < recv_len; i++) {
-        if (i < headerSize)
-            printf("%x-", auxBuffer[i]);
-        else
-            printf("%x-", auxBuffer[i]);
-    }
-    puts("");
+
     for (int i = 0; i < recv_len; i++)
         buffer[i] = auxBuffer[i+headerSize];
-    buffer[recv_len] = '\0';  // Adiciona um terminador de string
-    puts("Recv buffer em hex:");
-    for (int i = 0; i < buffer[3]+4; i++) {
-        printf("%x-", buffer[i]);
-    }
-    puts("\nRecv buffer em char:");
-    for (int i = 0; i < buffer[3]+4; i++) {
-        printf("%c", buffer[i]);
-    }
-    puts("");
+
     return true;
 }
 

@@ -3,8 +3,7 @@
 ClientUDP::ClientUDP() {
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) {
-        std::cerr << "Erro ao criar o socket." << std::endl;
-        return;
+        throw std::runtime_error("Erro ao criar o socket.");
     }
 
     memset(&server_addr, 0, sizeof(server_addr));
@@ -16,14 +15,23 @@ ClientUDP::ClientUDP() {
 ClientUDP::ClientUDP(const char *ip, int port) {
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) {
-        std::cerr << "Erro ao criar o socket." << std::endl;
-        return;
+        throw std::runtime_error("Erro ao criar o socket.");
     }
 
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(port);  // Porta do servidor
     inet_pton(AF_INET, ip, &server_addr.sin_addr);  // Endereço escolhido
+
+    // Definir o timeout para 3 segundos
+    struct timeval timeout;
+    timeout.tv_sec = 3;
+    timeout.tv_usec = 0;
+
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
+        throw std::runtime_error("Erro ao definir timeout.");
+        close(sockfd);
+    }
 }
 
 ClientUDP::~ClientUDP()
