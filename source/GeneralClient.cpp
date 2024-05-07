@@ -78,7 +78,7 @@ bool GeneralClient::handleType0Message(unsigned char* buffer, size_t buffer_size
     // Caso o tipo seja o correto, mas o identificador não esteja correto, imprime um warning
     if (recvBuffer[1] != messageBytes[1] || recvBuffer[2] != messageBytes[2])
     {
-        std::cerr << "WARNING: O indentificador não condiz com o enviado. É possível que a mensagem recebida seja uma mensagem atrasada ou de terceiro." << std::endl;
+        std::cerr << "WARNING: O identificador não condiz com o enviado. É possível que a mensagem recebida seja uma mensagem atrasada ou de terceiro." << std::endl;
     }
     int messageSize = recvBuffer[3];
 
@@ -134,7 +134,7 @@ bool GeneralClient::handleType1Message(unsigned char* buffer, size_t buffer_size
     // Caso o tipo seja o correto, mas o identificador não esteja correto, imprime um warning
     if (recvBuffer[1] != messageBytes[1] || recvBuffer[2] != messageBytes[2])
     {
-        std::cerr << "WARNING: O indentificador não condiz com o enviado. É possível que a mensagem recebida seja uma mensagem atrasada ou de terceiro." << std::endl;
+        std::cerr << "WARNING: O identificador não condiz com o enviado. É possível que a mensagem recebida seja uma mensagem atrasada ou de terceiro." << std::endl;
     }
 
     int messageSize = recvBuffer[3];
@@ -195,7 +195,7 @@ bool GeneralClient::handleType2Message(unsigned int* resp){
     // Caso o tipo seja o correto, mas o identificador não esteja correto, imprime um warning
     if (recvBuffer[1] != messageBytes[1] || recvBuffer[2] != messageBytes[2])
     {
-        std::cerr << "WARNING: O indentificador não condiz com o enviado. É possível que a mensagem recebida seja uma mensagem atrasada ou de terceiro." << std::endl;
+        std::cerr << "WARNING: O identificador não condiz com o enviado. É possível que a mensagem recebida seja uma mensagem atrasada ou de terceiro." << std::endl;
     }
 
     for (size_t i = 0; i < 4; i++)

@@ -66,7 +66,7 @@ bool ClientRAW::sendMessage(u_char* rawMessage) {
     u_char udpPkt[SEGMENT_SIZE] = {0}; // Inicializando o array de bytes com 0
 
     // Colocando a porta de origem
-    uint16_t aux = ntohs(local_addr.sin_port); // Passando para big-endian
+    u_short aux = ntohs(local_addr.sin_port); // Passando para big-endian
     // Porta 22222
     udpPkt[0] = 0x56;
     udpPkt[1] = 0xCE;
@@ -99,11 +99,13 @@ bool ClientRAW::receiveMessage(u_char* buffer, size_t buffer_size) {
     const int headerSize = UDP_HEADER_SIZE+IPV4_HEADER_SIZE;
     u_char auxBuffer[buffer_size+headerSize];
 
+    // Recebendo a mensagem crua
     ssize_t recv_len = recvfrom(sockfd, auxBuffer, buffer_size+headerSize, 0, nullptr, nullptr);
     if (recv_len < 0) {
         return false;
     }
 
+    // Extraindo o payload ao pular os headers IP e UDP
     for (int i = 0; i < recv_len; i++)
         buffer[i] = auxBuffer[i+headerSize];
 
@@ -111,7 +113,7 @@ bool ClientRAW::receiveMessage(u_char* buffer, size_t buffer_size) {
 }
 
 u_short ClientRAW::computeChecksum(u_char* segment, int segSize) {
-    u_char* auxSegment = segment;
+    u_char* auxSegment = segment; // Array de bytes para auxiliar o padding
     bool padded = false;
     
     // Fazendo o padding do último byte, caso o tamanho seja ímpar
@@ -126,11 +128,11 @@ u_short ClientRAW::computeChecksum(u_char* segment, int segSize) {
     u_int chksum = 0;
 
     // Somando o pseudoheader
-    u_int aux = getLocalIPv4(); // Little-endian
+    u_int aux = getLocalIPv4(); // Já está em big-endian
     chksum += static_cast<u_short>(aux >> 16); // LSBytes do IP local
     chksum += static_cast<u_short>(aux); // MSBytes do IP local
 
-    aux = ntohl(server_addr.sin_addr.s_addr); // Little-endian
+    aux = ntohl(server_addr.sin_addr.s_addr); // Passando para big-endian
     chksum += static_cast<u_short>(aux >> 16); // LSBytes do IP de destino
     chksum += static_cast<u_short>(aux); // MSBytes do IP de destino
 
@@ -151,7 +153,7 @@ u_short ClientRAW::computeChecksum(u_char* segment, int segSize) {
 }
 
 /**
- *  Retorna o endereço IPv4 como um inteiro de 32 bits em formato little-endian.
+ *  Retorna o endereço IPv4 como um inteiro de 32 bits sem sinal em formato big-endian.
  */
 u_int ClientRAW::getLocalIPv4() {
     // Pegando as interfaces de rede locais
@@ -166,9 +168,9 @@ u_int ClientRAW::getLocalIPv4() {
         
         // Pegando a primeira interface com conexão de internet e sem ser o loopback
         if (ifa->ifa_addr != nullptr && ifa->ifa_addr->sa_family == AF_INET && strcmp(ifa->ifa_name, "lo") != 0) {
-            // Pegando o IPv4 em little-endian
+            // Pegando o IPv4
             struct sockaddr_in *addr = reinterpret_cast<struct sockaddr_in*>(ifa->ifa_addr);
-            u_int ipv4 = ntohl(addr->sin_addr.s_addr);
+            u_int ipv4 = ntohl(addr->sin_addr.s_addr); // Passando para big-endian
             freeifaddrs(ifaddr);
             return ipv4;
         }
