@@ -32,20 +32,28 @@ ClientRAW::ClientRAW(const char* ip, int port)
 {
 	sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
     if (sockfd < 0) {
-        std::cerr << "Erro ao criar o socket." << std::endl;
-        return;
+        throw std::runtime_error("Erro ao criar socket.");
     }
     
     socklen_t addr_len = sizeof(this->local_addr);
     if (getsockname(sockfd, (struct sockaddr *)& this->local_addr, &addr_len) != 0) {
-        std::cerr << "Erro ao obter a porta local." << std::endl;
-        return;
+        throw std::runtime_error("Erro ao obter porta.");
     }
     
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(port);  // Porta do servidor
     inet_pton(AF_INET, ip, &server_addr.sin_addr);  // Endereço escolhido
+
+    // Definir o timeout para 3 segundos
+    struct timeval timeout;
+    timeout.tv_sec = 3;
+    timeout.tv_usec = 0;
+
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
+        throw std::runtime_error("Erro ao definir timeout.");
+        close(sockfd);
+    }
 }
 
 ClientRAW::~ClientRAW()
