@@ -4,7 +4,7 @@ ClientRAW::ClientRAW()
 {
 	sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
     if (sockfd < 0) {
-        throw std::runtime_error("Erro ao criar socket.");
+        throw std::runtime_error("Erro ao criar socket. (Tente executar o programa com \"sudo\" ou \"como administrador\")");
     }
 
     socklen_t addr_len = sizeof(this->local_addr);
@@ -32,7 +32,7 @@ ClientRAW::ClientRAW(const char* ip, int port)
 {
 	sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
     if (sockfd < 0) {
-        throw std::runtime_error("Erro ao criar socket.");
+        throw std::runtime_error("Erro ao criar socket. (Tente executar o programa com \"sudo\" ou \"como administrador\")");
     }
     
     socklen_t addr_len = sizeof(this->local_addr);
