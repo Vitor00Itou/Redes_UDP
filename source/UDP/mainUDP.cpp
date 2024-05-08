@@ -1,3 +1,13 @@
+// Trabalho para disciplina de redes
+
+// Alunos:			João Victor Silva Bezerra Nascimento 
+// 			        20200007760
+
+//                 André Vitor Oliveira Brito
+//                 20210066943
+
+// Professor:      Fernando Menezes Matos
+
 #include <iostream>
 #include <string>
 #include "ClientUDP.h"
