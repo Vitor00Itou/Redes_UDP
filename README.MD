@@ -1,8 +1,7 @@
-Trabalho para disciplina de redes
+Trabalho para disciplina de Redes de Computadores 
 
-Alunos:			João Victor Silva Bezerra Nascimento 
-			    20200007760
-
+Alunos:		João Victor Silva Bezerra Nascimento 
+		20200007760
                 André Vitor Oliveira Brito
                 20210066943
 
